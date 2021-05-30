@@ -3,8 +3,15 @@
 
 //TITLE Definitions:
 #define CELL_SIZE 50
+
 #define FREE 0
 #define RESERVED 1
+
+#define UNKNOWN_DIRECTION -1
+#define UP_DIRECTION 0
+#define RIGHT_DIRECTION 1
+#define DOWN_DIRECTION 2
+#define LEFT_DIRECTION 3
 
 #include <SDL.h>
 #include <SDL_image.h>
@@ -43,6 +50,7 @@ private:
 //TITLE Ships relations (variables, private):
     std::vector<Ship> ships;
     Ship *activeShip;
+    int killedShipsCount;
 
 
 //TITLE Ships relations (methods, private):
@@ -97,13 +105,18 @@ private:
     void unsurroundCell(const Point cellCoords);
 
 
-
-
 public:
 //TITLE Constructor & Destructor:
     Grid();
 
     ~Grid() = default;
+
+
+//TITLE Ships relations (variables, public):
+    bool isShipAimed;
+    int shootingDirection;
+    Cell lastShotCell;
+    Cell startShotCell;
 
 
 //TITLE Ships relations (methods, public):
@@ -125,7 +138,9 @@ public:
 
     int shoot(const int coordsX, const int coordsY, const Point startPoint);
 
-    int shootRand();
+    int getShotRand(Cell *startShotCell, Cell *lastShotCell);
+
+    int shootNear(Grid *grid);
 
     bool isGameOver();
 

@@ -349,14 +349,23 @@ void GameManager::shoot() {
                 playerGrid->hasShootTwice = true;
             } else {
                 int res;
-
                 do {
-                    res = playerGrid->shootRand();
+                    if (!computerGrid->isShipAimed) {
+                        res = playerGrid->getShotRand(&computerGrid->startShotCell, &computerGrid->lastShotCell);
+                    } else {
+                        res = computerGrid->shootNear(playerGrid);
+                    }
+                    if (res == 2) {
+                        if (!computerGrid->isShipAimed) {
+                            computerGrid->isShipAimed = true;
+                            computerGrid->shootingDirection = UNKNOWN_DIRECTION;
+                        }
+                        refreshWarPage();
+                        SDL_Delay(400);
+                    } else
+                        break;
+                } while (true);
 
-                    refreshWarPage();
-
-                    SDL_Delay(400);
-                } while (res == 2);
                 switch (res) {
                     case -1: {
                         gameOver = true;
@@ -365,8 +374,8 @@ void GameManager::shoot() {
                     }
                     case 1:
                     default:
+                        //TODO Delete this call
                         refreshWarPage();
-
                         break;
                 }
             }

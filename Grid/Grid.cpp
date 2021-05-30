@@ -32,9 +32,30 @@ Grid::Grid() {
 
     activeShip = &ships.front();
 
+    killedShipsCount = 0;
+
     isDestroyEnemyShip = false;
     isExtraShootPressed = false;
     hasShootTwice = false;
+
+    isShipAimed = false;
+    shootingDirection = UNKNOWN_DIRECTION;
+    lastShotCell = {
+            -1,
+            -1,
+            -1,
+            false,
+            false,
+            true
+    };
+    startShotCell = {
+            -1,
+            -1,
+            -1,
+            false,
+            false,
+            true
+    };
 }
 
 
@@ -64,7 +85,6 @@ void Grid::outputWarComputerGrid(SDL_Renderer *renderer, const Point startPoint)
         }
     }
 }
-
 
 
 //TITLE Bonuses relations (methods, public):
@@ -200,6 +220,7 @@ void Grid::unsurroundActiveShip() {
 
 void Grid::checkShips() {
     bool isKilled = true;
+    int counter = 0;
 
     for (auto &ship : ships) {
         if (ship.start.y == ship.end.y) {
@@ -221,14 +242,16 @@ void Grid::checkShips() {
         ship.isKilled = isKilled;
         isKilled = true;
 
-        if (ship.isKilled)
+        if (ship.isKilled) {
             shootAround(&ship);
+            ++counter;
+        }
     }
 
-//    int counter = 0;
-//    for (auto &ship : ships) {
-//        counter += ship.isKilled ? 1 : 0;
-//    }
+    if (counter != killedShipsCount) {
+        killedShipsCount = counter;
+        isShipAimed = false;
+    }
 }
 
 void Grid::shootAround(const Ship *ship) {
@@ -420,9 +443,9 @@ int Grid::shoot(const int coordsX, const int coordsY, const Point startPoint) {
     return 0;
 }
 
-int Grid::shootRand() {
-    int x = rand() % 10;
-    int y = rand() % 10;
+int Grid::getShotRand(Cell *startShotCell, Cell *lastShotCell) {
+    int x;
+    int y;
 
     do {
         x = rand() % 10;
@@ -430,15 +453,128 @@ int Grid::shootRand() {
     } while (!canBeShot(x, y));
 
     cells[y][x].isShot = true;
+    *startShotCell = *lastShotCell = cells[y][x];
+
+    checkShips();
+
+    if (isGameOver())
+        return -1;
+    else {
+        return cells[y][x].status == RESERVED ? 2 : 1;
+    }
+}
+
+int Grid::shootNear(Grid *grid) {
+//    int x = lastShotCell.x;
+//    int y = lastShotCell.y;
+
+    bool hasShot = false,
+            upTried = false,
+            rightTried = false,
+            downTried = false,
+            leftTried = false;
+
+
+    while (!hasShot) {
+        switch (shootingDirection) {
+            case UP_DIRECTION: {
+                if (lastShotCell.y - 1 >= 0 && !grid->cells[lastShotCell.y - 1][lastShotCell.x].isShot) {
+//                    --lastShotCell.y;
+                    hasShot = true;
+
+                    grid->cells[lastShotCell.y - 1][lastShotCell.x].isShot = true;
+                    lastShotCell = grid->cells[lastShotCell.y - 1][lastShotCell.x];
+
+                    if (lastShotCell.status != RESERVED) {
+                        lastShotCell = startShotCell;
+                        upTried = true;
+                        shootingDirection += downTried ? 1 : 0;
+                        shootingDirection = (shootingDirection + 2) % 4;
+                    }
+                } else {
+                    upTried = true;
+                    shootingDirection += downTried ? 1 : 0;
+                    shootingDirection = (shootingDirection + 2) % 4;
+                }
+                break;
+            }
+            case RIGHT_DIRECTION: {
+                if (lastShotCell.x + 1 <= 9 && !grid->cells[lastShotCell.y][lastShotCell.x + 1].isShot) {
+//                    ++lastShotCell.x;
+                    hasShot = true;
+
+                    grid->cells[lastShotCell.y][lastShotCell.x].isShot = true;
+                    lastShotCell = grid->cells[lastShotCell.y][lastShotCell.x + 1];
+
+                    if (lastShotCell.status != RESERVED) {
+                        lastShotCell = startShotCell;
+                        rightTried = true;
+                        shootingDirection += leftTried ? 1 : 0;
+                        shootingDirection = (shootingDirection + 2) % 4;
+                    }
+                } else {
+                    rightTried = true;
+                    shootingDirection += leftTried ? 1 : 0;
+                    shootingDirection = (shootingDirection + 2) % 4;
+                }
+                break;
+            }
+            case DOWN_DIRECTION: {
+                if (lastShotCell.y + 1 <= 9 && !grid->cells[lastShotCell.y + 1][lastShotCell.x].isShot) {
+//                    ++lastShotCell.y;
+                    hasShot = true;
+
+                    grid->cells[lastShotCell.y][lastShotCell.x].isShot = true;
+                    lastShotCell = grid->cells[lastShotCell.y + 1][lastShotCell.x];
+
+                    if (lastShotCell.status != RESERVED) {
+                        lastShotCell = startShotCell;
+                        downTried = true;
+                        shootingDirection += upTried ? 1 : 0;
+                        shootingDirection = (shootingDirection + 2) % 4;
+                    }
+                } else {
+                    downTried = true;
+                    shootingDirection += upTried ? 1 : 0;
+                    shootingDirection = (shootingDirection + 2) % 4;
+                }
+                break;
+            }
+            case LEFT_DIRECTION: {
+                if (lastShotCell.x - 1 >= 0 && !grid->cells[lastShotCell.y][lastShotCell.x - 1].isShot) {
+//                    --lastShotCell.x;
+                    hasShot = true;
+
+                    grid->cells[lastShotCell.y][lastShotCell.x].isShot = true;
+                    lastShotCell = grid->cells[lastShotCell.y][lastShotCell.x - 1];
+
+                    if (lastShotCell.status != RESERVED) {
+                        lastShotCell = startShotCell;
+                        leftTried = true;
+                        shootingDirection += rightTried ? 1 : 0;
+                        shootingDirection = (shootingDirection + 2) % 4;
+                    }
+                } else {
+                    leftTried = true;
+                    shootingDirection += rightTried ? 1 : 0;
+                    shootingDirection = (shootingDirection + 2) % 4;
+                }
+                break;
+            }
+            case UNKNOWN_DIRECTION:
+            default: {
+                shootingDirection = rand() % 4;
+                break;
+            }
+        }
+    }
 
     checkShips();
 
     if (isGameOver())
         return -1;
     else
-        return cells[y][x].status == RESERVED ? 2 : 1;
-
-
+        return cells[lastShotCell.y][lastShotCell.x].status == RESERVED ? 2 : 1;
 }
 
 
