@@ -1,0 +1,4 @@
+/Users/sveta/Documents/BGTU/Programming/Battleship/cmake-build-debug/CMakeFiles/Battleship_exe.dir
+/Users/sveta/Documents/BGTU/Programming/Battleship/cmake-build-debug/CMakeFiles/rebuild_cache.dir
+/Users/sveta/Documents/BGTU/Programming/Battleship/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/sveta/Documents/BGTU/Programming/Battleship/cmake-build-debug/CMakeFiles/Battleship.dir

@@ -1,0 +1,8 @@
+#ifndef BATTLESHIP_WINNERMANAGER_H
+#define BATTLESHIP_WINNERMANAGER_H
+
+class WinnerManager {
+
+};
+
+#endif //BATTLESHIP_WINNERMANAGER_H

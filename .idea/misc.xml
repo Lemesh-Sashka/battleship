@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CMakeWorkspace" PROJECT_DIR="$PROJECT_DIR$" />
+  <component name="CidrRootsConfiguration">
+    <sourceRoots>
+      <file path="$PROJECT_DIR$/Bonus" />
+      <file path="$PROJECT_DIR$/GameManager" />
+      <file path="$PROJECT_DIR$/Grid" />
+      <file path="$PROJECT_DIR$/Help" />
+      <file path="$PROJECT_DIR$/Menu" />
+      <file path="$PROJECT_DIR$/WinnersManager" />
+    </sourceRoots>
+  </component>
+</project>
