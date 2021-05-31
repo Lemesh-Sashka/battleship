@@ -13,6 +13,10 @@
 #define DOWN_DIRECTION 2
 #define LEFT_DIRECTION 3
 
+#define NOT_SHOT_CODE -1
+#define DEAL_DAMAGE_CODE 0
+#define MISS_CODE 1
+
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_ttf.h>
@@ -136,11 +140,17 @@ public:
 
     bool isShipPressed(const int coordsX, const int coordsY, const Point startPoint);
 
-    int shoot(const int coordsX, const int coordsY, const Point startPoint);
+    int shoot(Grid *enemyGrid, const int coordsX, const int coordsY, const Point startPoint);
+    int getShot(Grid *grid, const int coordsX, const int coordsY, const Point startPoint);
 
-    int getShotRand(Cell *startShotCell, Cell *lastShotCell);
+    int getShotRand(Grid *grid);
 
-    int shootNear(Grid *grid);
+    int shootNear(Grid *enemyGrid);
+    int shootRand(Grid *enemyGrid);
+
+    void changeDirection(Grid *enemyGrid);
+
+    bool newShipKill();
 
     bool isGameOver();
 

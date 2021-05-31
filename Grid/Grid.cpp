@@ -220,7 +220,7 @@ void Grid::unsurroundActiveShip() {
 
 void Grid::checkShips() {
     bool isKilled = true;
-    int counter = 0;
+//    int counter = 0;
 
     for (auto &ship : ships) {
         if (ship.start.y == ship.end.y) {
@@ -244,14 +244,14 @@ void Grid::checkShips() {
 
         if (ship.isKilled) {
             shootAround(&ship);
-            ++counter;
+//            ++counter;
         }
     }
 
-    if (counter != killedShipsCount) {
-        killedShipsCount = counter;
-        isShipAimed = false;
-    }
+//    if (counter != killedShipsCount) {
+//        killedShipsCount = counter;
+//        isShipAimed = false;
+//    }
 }
 
 void Grid::shootAround(const Ship *ship) {
@@ -416,7 +416,7 @@ bool Grid::isShipPressed(const int coordsX, const int coordsY, const Point start
     return false;
 }
 
-int Grid::shoot(const int coordsX, const int coordsY, const Point startPoint) {
+int Grid::shoot(Grid *enemyGrid, const int coordsX, const int coordsY, const Point startPoint) {
     int x, y;
 
     if (startPoint.x <= coordsX && coordsX <= startPoint.x + (CELL_SIZE + 1) * 10) {
@@ -424,50 +424,71 @@ int Grid::shoot(const int coordsX, const int coordsY, const Point startPoint) {
             x = (coordsX - startPoint.x) / (CELL_SIZE + 1);
             y = (coordsY - startPoint.y) / (CELL_SIZE + 1);
 
+            if (enemyGrid->canBeShot(x, y)) {
+                enemyGrid->cells[y][x].isShot = true;
+                lastShotCell = enemyGrid->cells[y][x];
 
-            if (canBeShot(x, y)) {
-                cells[y][x].isShot = true;
+                enemyGrid->checkShips();
 
-                checkShips();
-
-                if (isGameOver())
-                    return -1;
-                else
-                    return cells[y][x].status == RESERVED ? 2 : 1;
-            } else {
-                return 0;
+                return lastShotCell.status == RESERVED ? DEAL_DAMAGE_CODE : MISS_CODE;
             }
+
+            return NOT_SHOT_CODE;
         }
     }
 
-    return 0;
+    return NOT_SHOT_CODE;
 }
 
-int Grid::getShotRand(Cell *startShotCell, Cell *lastShotCell) {
+
+int Grid::shootRand(Grid *enemyGrid) {
     int x;
     int y;
 
+    // Random coords till the cell can be shot
     do {
         x = rand() % 10;
         y = rand() % 10;
-    } while (!canBeShot(x, y));
+    } while (!enemyGrid->canBeShot(x, y));
 
-    cells[y][x].isShot = true;
-    *startShotCell = *lastShotCell = cells[y][x];
+    // Enemy's cell is being shot
+    enemyGrid->cells[y][x].isShot = true;
 
-    checkShips();
+//    checkShips();
 
-    if (isGameOver())
-        return -1;
-    else {
-        return cells[y][x].status == RESERVED ? 2 : 1;
-    }
+    // Save the last and start shot cell.
+    lastShotCell = startShotCell = enemyGrid->cells[y][x];
+
+    return lastShotCell.status == RESERVED ? DEAL_DAMAGE_CODE : MISS_CODE;
 }
 
-int Grid::shootNear(Grid *grid) {
-//    int x = lastShotCell.x;
-//    int y = lastShotCell.y;
+//int Grid::getShotRand(Grid *grid) {
+//    int x;
+//    int y;
+//
+//    do {
+//        x = rand() % 10;
+//        y = rand() % 10;
+//    } while (!canBeShot(x, y));
+//
+//    cells[y][x].isShot = true;
+//    grid->startShotCell = grid->lastShotCell = cells[y][x];
+//
+//    grid->checkShips(this);
+//
+//    if (isGameOver(this))
+//        return -1;
+//    else {
+//        if (cells[y][x].status == RESERVED) {
+//            return grid->isShipAimed ? 2 : 1;
+//        } else {
+//            return 1;
+//        }
+//        return cells[y][x].status == RESERVED ? 2 : 1;
+//    }
+//}
 
+int Grid::shootNear(Grid *enemyGrid) {
     bool hasShot = false,
             upTried = false,
             rightTried = false,
@@ -478,15 +499,14 @@ int Grid::shootNear(Grid *grid) {
     while (!hasShot) {
         switch (shootingDirection) {
             case UP_DIRECTION: {
-                if (lastShotCell.y - 1 >= 0 && !grid->cells[lastShotCell.y - 1][lastShotCell.x].isShot) {
-//                    --lastShotCell.y;
+                if (lastShotCell.y - 1 >= 0 && !enemyGrid->cells[lastShotCell.y - 1][lastShotCell.x].isShot) {
                     hasShot = true;
 
-                    grid->cells[lastShotCell.y - 1][lastShotCell.x].isShot = true;
-                    lastShotCell = grid->cells[lastShotCell.y - 1][lastShotCell.x];
+                    enemyGrid->cells[lastShotCell.y - 1][lastShotCell.x].isShot = true;
+                    lastShotCell = enemyGrid->cells[lastShotCell.y - 1][lastShotCell.x];
 
                     if (lastShotCell.status != RESERVED) {
-                        lastShotCell = startShotCell;
+//                        lastShotCell = startShotCell;
                         upTried = true;
                         shootingDirection += downTried ? 1 : 0;
                         shootingDirection = (shootingDirection + 2) % 4;
@@ -499,15 +519,14 @@ int Grid::shootNear(Grid *grid) {
                 break;
             }
             case RIGHT_DIRECTION: {
-                if (lastShotCell.x + 1 <= 9 && !grid->cells[lastShotCell.y][lastShotCell.x + 1].isShot) {
-//                    ++lastShotCell.x;
+                if (lastShotCell.x + 1 <= 9 && !enemyGrid->cells[lastShotCell.y][lastShotCell.x + 1].isShot) {
                     hasShot = true;
 
-                    grid->cells[lastShotCell.y][lastShotCell.x].isShot = true;
-                    lastShotCell = grid->cells[lastShotCell.y][lastShotCell.x + 1];
+                    enemyGrid->cells[lastShotCell.y][lastShotCell.x + 1].isShot = true;
+                    lastShotCell = enemyGrid->cells[lastShotCell.y][lastShotCell.x + 1];
 
                     if (lastShotCell.status != RESERVED) {
-                        lastShotCell = startShotCell;
+//                        lastShotCell = startShotCell;
                         rightTried = true;
                         shootingDirection += leftTried ? 1 : 0;
                         shootingDirection = (shootingDirection + 2) % 4;
@@ -520,15 +539,14 @@ int Grid::shootNear(Grid *grid) {
                 break;
             }
             case DOWN_DIRECTION: {
-                if (lastShotCell.y + 1 <= 9 && !grid->cells[lastShotCell.y + 1][lastShotCell.x].isShot) {
-//                    ++lastShotCell.y;
+                if (lastShotCell.y + 1 <= 9 && !enemyGrid->cells[lastShotCell.y + 1][lastShotCell.x].isShot) {
                     hasShot = true;
 
-                    grid->cells[lastShotCell.y][lastShotCell.x].isShot = true;
-                    lastShotCell = grid->cells[lastShotCell.y + 1][lastShotCell.x];
+                    enemyGrid->cells[lastShotCell.y + 1][lastShotCell.x].isShot = true;
+                    lastShotCell = enemyGrid->cells[lastShotCell.y + 1][lastShotCell.x];
 
                     if (lastShotCell.status != RESERVED) {
-                        lastShotCell = startShotCell;
+//                        lastShotCell = startShotCell;
                         downTried = true;
                         shootingDirection += upTried ? 1 : 0;
                         shootingDirection = (shootingDirection + 2) % 4;
@@ -541,15 +559,14 @@ int Grid::shootNear(Grid *grid) {
                 break;
             }
             case LEFT_DIRECTION: {
-                if (lastShotCell.x - 1 >= 0 && !grid->cells[lastShotCell.y][lastShotCell.x - 1].isShot) {
-//                    --lastShotCell.x;
+                if (lastShotCell.x - 1 >= 0 && !enemyGrid->cells[lastShotCell.y][lastShotCell.x - 1].isShot) {
                     hasShot = true;
 
-                    grid->cells[lastShotCell.y][lastShotCell.x].isShot = true;
-                    lastShotCell = grid->cells[lastShotCell.y][lastShotCell.x - 1];
+                    enemyGrid->cells[lastShotCell.y][lastShotCell.x - 1].isShot = true;
+                    lastShotCell = enemyGrid->cells[lastShotCell.y][lastShotCell.x - 1];
 
                     if (lastShotCell.status != RESERVED) {
-                        lastShotCell = startShotCell;
+//                        lastShotCell = startShotCell;
                         leftTried = true;
                         shootingDirection += rightTried ? 1 : 0;
                         shootingDirection = (shootingDirection + 2) % 4;
@@ -561,20 +578,25 @@ int Grid::shootNear(Grid *grid) {
                 }
                 break;
             }
-            case UNKNOWN_DIRECTION:
-            default: {
+            case UNKNOWN_DIRECTION: {
                 shootingDirection = rand() % 4;
                 break;
             }
+            default:
+                break;
         }
     }
 
-    checkShips();
+//    checkShips();
 
-    if (isGameOver())
-        return -1;
-    else
-        return cells[lastShotCell.y][lastShotCell.x].status == RESERVED ? 2 : 1;
+    if (lastShotCell.status != RESERVED) {
+        lastShotCell = startShotCell;
+        return MISS_CODE;
+    } else
+        return DEAL_DAMAGE_CODE;
+//    if (enemyGrid->isGameOver())
+//        return -1;
+//    else
 }
 
 
@@ -804,6 +826,43 @@ void Grid::unsurroundCell(const Point cellCoords) {
     }
 
     cells[cellCoords.y][cellCoords.x].placeable = true;
+}
+
+bool Grid::newShipKill() {
+    bool isKilled = true;
+    int counter = 0;
+
+    for (auto &ship : ships) {
+        if (ship.start.y == ship.end.y) {
+            for (int i = 0; i < ship.type; ++i) {
+                if (!cells[ship.start.y][ship.start.x + i].isShot) {
+                    isKilled = false;
+                    break;
+                }
+            }
+        } else {
+            for (int i = 0; i < ship.type; ++i) {
+                if (!cells[ship.start.y + i][ship.start.x].isShot) {
+                    isKilled = false;
+                    break;
+                }
+            }
+        }
+
+        ship.isKilled = isKilled;
+        isKilled = true;
+
+        if (ship.isKilled) {
+            shootAround(&ship);
+            ++counter;
+        }
+    }
+
+    if (counter != killedShipsCount) {
+        killedShipsCount = counter;
+        return true;
+    } else
+        return false;
 }
 
 bool Grid::isGameOver() {

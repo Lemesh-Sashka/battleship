@@ -32,7 +32,7 @@ GameManager::GameManager() {
     warComputerPoint = {670, 70};
 
 
-    winner = UNKNOWN_ID;
+    winnerId = UNKNOWN_ID;
 }
 
 void GameManager::Play() {
@@ -183,24 +183,16 @@ void GameManager::warPage() {
                 if (isFinished || toMainMenu)
                     return;
                 else {
-                    SDL_RenderClear(renderer);
-                    SDL_RenderCopy(renderer, bgTexture, NULL, NULL);
-
-                    playerGrid->outputWarGrid(renderer, warPlayerPoint);
-                    computerGrid->outputWarGrid(renderer, warComputerPoint);
-
-                    outputBonuses();
-
-                    SDL_RenderPresent(renderer);
+                    refreshWarPage();
                 }
             } else if (event.type == SDL_MOUSEBUTTONUP && event.button.button == SDL_BUTTON_LEFT) {
-                shoot();
+                shootingProcess();
                 if (gameOver)
                     return;
             } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_1) {
                 destroyEnemyShip(computerGrid);
                 if (gameOver) {
-                    winner = PLAYER_ID;
+                    winnerId = PLAYER_ID;
                     return;
                 }
             } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_2) {
@@ -210,7 +202,7 @@ void GameManager::warPage() {
         SDL_Delay(50);
     }
 
-    //TODO Make computer shoot intelligence
+    //TODO Make computer getShot intelligence
 
     //TODO Add sound effects.
 
@@ -235,7 +227,7 @@ void GameManager::victoryPage() {
     SDL_RenderCopy(renderer, bgTexture, NULL, NULL);
 
     menu->outputVictoryTitle(renderer);
-    menu->outputWinner(renderer, winner);
+    menu->outputWinner(renderer, winnerId);
 
     SDL_RenderPresent(renderer);
 
@@ -333,57 +325,98 @@ void GameManager::removeShip() {
     }
 }
 
-void GameManager::shoot() {
+void GameManager::shootingProcess() {
+    bool missed = playerShootingProcess();
+
+    // If after shooting the computer's grid the last ship
+    // is destroyed, the game must be finished.
+    if (gameOver)
+        return;
+
+    // If player misses, computer shoots.
+    if (missed) {
+        computerShootingProcess();
+
+        if (gameOver)
+            return;
+    }
+}
+
+bool GameManager::playerShootingProcess() {
+    bool missed;
+    bool hasShot = false;
     SDL_GetMouseState(&coordsX, &coordsY);
 
-    switch (computerGrid->shoot(coordsX, coordsY, warComputerPoint)) {
-        case -1: {
-            gameOver = true;
-            winner = PLAYER_ID;
-            return;
-        }
-        case 0:
-            break;
-        case 1: {
-            if (playerGrid->isExtraShootPressed && !playerGrid->hasShootTwice) {
-                playerGrid->hasShootTwice = true;
-            } else {
-                int res;
-                do {
-                    if (!computerGrid->isShipAimed) {
-                        res = playerGrid->getShotRand(&computerGrid->startShotCell, &computerGrid->lastShotCell);
-                    } else {
-                        res = computerGrid->shootNear(playerGrid);
-                    }
-                    if (res == 2) {
-                        if (!computerGrid->isShipAimed) {
-                            computerGrid->isShipAimed = true;
-                            computerGrid->shootingDirection = UNKNOWN_DIRECTION;
-                        }
-                        refreshWarPage();
-                        SDL_Delay(400);
-                    } else
-                        break;
-                } while (true);
-
-                switch (res) {
-                    case -1: {
-                        gameOver = true;
-                        winner = COMPUTER_ID;
-                        return;
-                    }
-                    case 1:
-                    default:
-                        //TODO Delete this call
-                        refreshWarPage();
-                        break;
+    while (!hasShot) {
+        switch (playerGrid->shoot(computerGrid, coordsX, coordsY, warComputerPoint)) {
+            case DEAL_DAMAGE_CODE: {
+                if (computerGrid->isGameOver()) {
+                    gameOver = true;
+                    winnerId = PLAYER_ID;
+                    return false;
                 }
+                hasShot = true;
+                missed = false;
+                break;
+            }
+            case MISS_CODE: {
+                // Player has extra shoot bonus activated. He has not missed basically
+                hasShot = true;
+                if (playerGrid->isExtraShootPressed && !playerGrid->hasShootTwice) {
+                    playerGrid->hasShootTwice = true;
+                    missed = false;
+                    break;
+                }
+
+                missed = true;
+
+                break;
+            }
+            case NOT_SHOT_CODE:
+            default: {
+                return false;
             }
         }
-        case 2:
-        default:
-            refreshWarPage();
-            break;
+    }
+
+    refreshWarPage();
+
+    return missed;
+}
+
+void GameManager::computerShootingProcess() {
+    int shootResult;
+
+    // Computer shoots until either the game is over or it has missed.
+    while (true) {
+        if (computerGrid->isShipAimed) {
+            shootResult = computerGrid->shootNear(playerGrid);
+        } else {
+            shootResult = computerGrid->shootRand(playerGrid);
+        }
+
+        refreshWarPage();
+
+        if (shootResult == MISS_CODE) {
+            if (!computerGrid->isShipAimed)
+                computerGrid->shootingDirection = UNKNOWN_DIRECTION;
+            return;
+        } else {
+            SDL_Delay(400);
+            // Computer target zone to shoot when no new ships have been destroyed
+            // after being damaged.
+            if (!playerGrid->newShipKill()) {
+                computerGrid->isShipAimed = true;
+            } else {
+                if (playerGrid->isGameOver()) {
+                    gameOver = true;
+                    winnerId = COMPUTER_ID;
+                    return;
+                }
+                computerGrid->isShipAimed = false;
+                computerGrid->shootingDirection = UNKNOWN_DIRECTION;
+            }
+        }
     }
 }
 

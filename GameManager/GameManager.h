@@ -53,7 +53,7 @@ private:
 
 //TITLE WinnersManager relations:
     WinnerManager *winnerManager;
-    int winner;
+    int winnerId;
 
 
 //TITLE HelpManager relations:
@@ -92,7 +92,11 @@ private:
 
     void removeShip();
 
-    void shoot();
+    void shootingProcess();
+
+    bool playerShootingProcess();
+
+    void computerShootingProcess();
 
 
 //TITLE Pages:

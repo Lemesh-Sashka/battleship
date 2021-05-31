@@ -64,7 +64,7 @@ SDL_Texture *Menu::getActivatedBonusTexture(SDL_Renderer *renderer, std::string 
 SDL_Texture *Menu::getVictoryTitleTexture(SDL_Renderer *renderer) {
     SDL_Surface *titleSurface = TTF_RenderText_Shaded(
             mainMenuTTF,
-            "Victory!",
+            "Game Over!",
             foreColor,
             backColor);
     SDL_Texture *texture = SDL_CreateTextureFromSurface(renderer, titleSurface);
